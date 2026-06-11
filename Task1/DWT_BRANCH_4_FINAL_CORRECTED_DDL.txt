@@ -1,0 +1,322 @@
+================================================================================
+DWT_BRANCH_4 - CORRECTED DDL STATEMENTS
+WITH PROPER COMPOSITE PRIMARY KEY FOR ITEM
+================================================================================
+
+================================================================================
+TABLE 1: SORT
+================================================================================
+
+CREATE TABLE SORT (
+    SORTNUMBER NUMBER(3,0) PRIMARY KEY,
+    NAME VARCHAR2(25)
+);
+
+EXPLANATION:
+- SORTNUMBER: Sort/Category ID
+  * PRIMARY KEY (unique identifier)
+- NAME: Sort category name (optional)
+
+Table Rows: 2
+
+
+================================================================================
+TABLE 2: CUSTOMER
+================================================================================
+
+CREATE TABLE CUSTOMER (
+    CUSTUMERNUMBER NUMBER(10,0) PRIMARY KEY,
+    NAME VARCHAR2(30) NOT NULL,
+    FIRSTNAME VARCHAR2(30) NOT NULL,
+    STREET_NO VARCHAR2(40),
+    ZIP NUMBER(5,0),
+    PLACE VARCHAR2(30),
+    GENDER CHAR(1),
+    BDAY DATE
+);
+
+EXPLANATION:
+- CUSTUMERNUMBER: Customer ID
+  * PRIMARY KEY (unique identifier)
+- NAME: Last name (required)
+- FIRSTNAME: First name (required)
+- STREET_NO, ZIP, PLACE, GENDER, BDAY: Optional fields
+
+Table Rows: 47,251
+
+
+================================================================================
+TABLE 3: PRODUCT
+================================================================================
+
+CREATE TABLE PRODUCT (
+    PRODUCTNUMBER NUMBER(12,0) PRIMARY KEY,
+    NAME VARCHAR2(30) NOT NULL,
+    SID NUMBER(5,0) NOT NULL,
+    SIZE VARCHAR2(20),
+    PRICE NUMBER(3,2) NOT NULL
+);
+
+EXPLANATION:
+- PRODUCTNUMBER: Product ID
+  * PRIMARY KEY (unique identifier)
+- NAME: Product name (required)
+- SID: Sort ID (required) - Should reference SORT.SORTNUMBER
+- SIZE: Product size (optional)
+- PRICE: Price (required) - Max 9.99
+
+Table Rows: 29
+
+
+================================================================================
+TABLE 4: ORDER
+================================================================================
+
+CREATE TABLE "ORDER" (
+    ORDERID NUMBER(13,0) PRIMARY KEY,
+    CID NUMBER(10,0) NOT NULL,
+    "DATE" DATE NOT NULL
+);
+
+EXPLANATION:
+- ORDERID: Order ID
+  * PRIMARY KEY (unique identifier)
+- CID: Customer ID (required) - Should reference CUSTOMER.CUSTUMERNUMBER
+- "DATE": Order date (required)
+
+Table Rows: 0 (EMPTY)
+
+
+================================================================================
+TABLE 5: ITEM (CORRECTED - COMPOSITE PRIMARY KEY!)
+================================================================================
+
+CREATE TABLE ITEM (
+    OID NUMBER(13,0) NOT NULL,
+    AMOUNT NUMBER(5,0) NOT NULL,
+    PID NUMBER(12,0) NOT NULL,
+    PRIMARY KEY (OID, AMOUNT, PID)
+);
+
+EXPLANATION:
+- OID: Order ID (Part 1 of Composite PK)
+  * NOT NULL
+  * Should reference ORDER.ORDERID (but NO FK constraint!)
+  
+- AMOUNT: Quantity/Line Amount (Part 2 of Composite PK)
+  * NOT NULL
+  * Part of the unique key
+  
+- PID: Product ID (Part 3 of Composite PK)
+  * NOT NULL
+  * Should reference PRODUCT.PRODUCTNUMBER (but NO FK constraint!)
+  
+- PRIMARY KEY: COMPOSITE on all three columns (OID, AMOUNT, PID)
+  * Makes combination unique
+  * Unusual design: AMOUNT as part of PK is very rare
+
+⚠️ DESIGN OBSERVATION:
+   Composite PK (OID, AMOUNT, PID) is VERY UNUSUAL
+   Typically would expect: PRIMARY KEY (OID, PID) only
+   Having AMOUNT as part of PK means:
+   - Each order can have max 1 line item per product
+   - Or the AMOUNT determines uniqueness somehow
+   - Unclear design intent
+
+Table Rows: 71,020
+
+
+================================================================================
+COMPLETE SCHEMA - ALL TABLES READY TO RUN
+================================================================================
+
+-- Drop tables if they exist (in reverse dependency order)
+DROP TABLE ITEM;
+DROP TABLE "ORDER";
+DROP TABLE PRODUCT;
+DROP TABLE CUSTOMER;
+DROP TABLE SORT;
+
+-- Create in correct order (referenced tables first)
+
+CREATE TABLE SORT (
+    SORTNUMBER NUMBER(3,0) PRIMARY KEY,
+    NAME VARCHAR2(25)
+);
+
+CREATE TABLE CUSTOMER (
+    CUSTUMERNUMBER NUMBER(10,0) PRIMARY KEY,
+    NAME VARCHAR2(30) NOT NULL,
+    FIRSTNAME VARCHAR2(30) NOT NULL,
+    STREET_NO VARCHAR2(40),
+    ZIP NUMBER(5,0),
+    PLACE VARCHAR2(30),
+    GENDER CHAR(1),
+    BDAY DATE
+);
+
+CREATE TABLE PRODUCT (
+    PRODUCTNUMBER NUMBER(12,0) PRIMARY KEY,
+    NAME VARCHAR2(30) NOT NULL,
+    SID NUMBER(5,0) NOT NULL,
+    SIZE VARCHAR2(20),
+    PRICE NUMBER(3,2) NOT NULL
+);
+
+CREATE TABLE "ORDER" (
+    ORDERID NUMBER(13,0) PRIMARY KEY,
+    CID NUMBER(10,0) NOT NULL,
+    "DATE" DATE NOT NULL
+);
+
+CREATE TABLE ITEM (
+    OID NUMBER(13,0) NOT NULL,
+    AMOUNT NUMBER(5,0) NOT NULL,
+    PID NUMBER(12,0) NOT NULL,
+    PRIMARY KEY (OID, AMOUNT, PID)
+);
+
+
+================================================================================
+ENTITY-RELATIONSHIP (E/R) DIAGRAM
+================================================================================
+
+                    ┌──────────────┐
+                    │    SORT      │
+                    │──────────────│
+                    │ SORTNUMBER(PK)
+                    │ NAME         │
+                    └──────┬───────┘
+                           │
+                           │ (1:N)
+                           │ SID
+                           │
+    ┌──────────────────────┘
+    │
+    │
+┌───▼──────────────┐
+│    PRODUCT       │
+│──────────────────│
+│ PRODUCTNUMBER(PK)│
+│ NAME             │
+│ SID (FK?)        │
+│ SIZE             │
+│ PRICE            │
+└────────┬─────────┘
+         │
+         │ (1:N)
+         │ PID
+         │
+         │      ┌──────────────┐
+         │      │   CUSTOMER   │
+         │      │──────────────│
+         │      │CUSTUMERNUMBER(PK)
+         │      │ NAME         │
+         │      │ FIRSTNAME    │
+         │      │ STREET_NO    │
+         │      │ ZIP          │
+         │      │ PLACE        │
+         │      │ GENDER       │
+         │      │ BDAY         │
+         │      └──────┬───────┘
+         │             │
+         │             │ (1:N)
+         │             │ CID
+         │             │
+         │      ┌──────▼───────┐
+         │      │    ORDER     │
+         │      │──────────────│
+         │      │ ORDERID (PK) │
+         │      │ CID (FK?)    │
+         │      │ DATE         │
+         │      └──────┬───────┘
+         │             │
+         │             │ (1:N)
+         │             │ OID
+         │             │
+         └─────────────┼────────────┐
+                       │            │
+                    ┌──▼────────────▼──┐
+                    │      ITEM        │
+                    │──────────────────│
+                    │ OID (PK1, FK?)   │
+                    │ AMOUNT (PK2)     │
+                    │ PID (PK3, FK?)   │
+                    └──────────────────┘
+
+RELATIONSHIPS (Inferred - NO FK constraints exist!):
+1. SORT ───(1:N)──> PRODUCT (via SID) - NO FK
+2. PRODUCT ─(1:N)─> ITEM (via PID) - NO FK
+3. ORDER ───(1:N)──> ITEM (via OID) - NO FK
+4. CUSTOMER ─(1:N)─> ORDER (via CID) - NO FK
+
+
+================================================================================
+DESIGN ISSUES (REQUIREMENT 5)
+================================================================================
+
+1. ✗ UNUSUAL COMPOSITE PRIMARY KEY ON ITEM
+   Current PK: (OID, AMOUNT, PID)
+   Problem: AMOUNT as part of PK is very unusual
+   Impact: Restricts data model flexibility
+   Best Practice: Should be PRIMARY KEY (OID, PID) only
+   Questions: 
+     - Why is AMOUNT part of the key?
+     - Does each order-product-amount combination must be unique?
+   Severity: High (design flaw)
+
+2. ✗ MISSING FOREIGN KEY CONSTRAINTS (CRITICAL!)
+   Expected FKs:
+   - PRODUCT.SID → SORT.SORTNUMBER
+   - ORDER.CID → CUSTOMER.CUSTUMERNUMBER
+   - ITEM.OID → ORDER.ORDERID
+   - ITEM.PID → PRODUCT.PRODUCTNUMBER
+   
+   Problem: NO foreign key constraints defined
+   Impact: NO referential integrity enforcement
+   Severity: CRITICAL
+
+3. ✗ MISSPELLED COLUMN NAME
+   Column: CUSTUMERNUMBER (should be CUSTOMERNUMBER)
+   Severity: Low
+
+4. ⚠ DATA TYPE LIMITATION - PRICE
+   Column: PRODUCT.PRICE NUMBER(3,2)
+   Capacity: Maximum 9.99
+   Severity: High
+
+5. ⚠ NO TIMESTAMP ON ORDER DATE
+   Column: ORDER.DATE is just DATE
+   Severity: Medium
+
+6. ✓ GOOD DESIGN: Separate ITEM table
+   Allows multiple items per order (unlike BRANCH_3)
+   Severity: None (positive aspect)
+
+7. ⚠ EMPTY ORDER TABLE
+   Current rows: 0 (no test data)
+   Severity: Low (testing issue)
+
+8. ✗ REDUNDANT CHECK CONSTRAINTS
+   All NOT NULL constraints duplicated as CHECK constraints
+   Severity: Low
+
+
+================================================================================
+SUMMARY FOR YOUR ASSIGNMENT
+================================================================================
+
+REQUIREMENT 1: ✓ Connected to database
+REQUIREMENT 2: ✓ Reversed-engineered schema (5 queries completed)
+REQUIREMENT 3: ✓ DDL Statements (5 tables with CORRECTED composite PK)
+REQUIREMENT 4: ✓ E/R diagram
+REQUIREMENT 5: ✓ Design issues identified (8 issues documented)
+
+✅ DWT_BRANCH_4 COMPLETE!
+
+KEY CORRECTIONS:
+- ITEM table PRIMARY KEY is (OID, AMOUNT, PID) - COMPOSITE on all 3 columns
+- Not just OID alone
+- This is an unusual design choice (AMOUNT in PK)
+
+================================================================================
