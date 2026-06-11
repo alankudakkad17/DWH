@@ -1,0 +1,315 @@
+================================================================================
+DWT_BRANCH_3 - FINAL DDL STATEMENTS (CLEAN VERSION)
+WITHOUT EXPLICIT CONSTRAINT NAMES
+================================================================================
+
+Since constraints are system-generated (SYS_C0020XXX), we don't need to 
+explicitly name them. Oracle will automatically assign names.
+
+================================================================================
+TABLE 1: BOTTLE
+================================================================================
+
+CREATE TABLE BOTTLE (
+    OID NUMBER(2,0) PRIMARY KEY,
+    VOL NUMBER(3,2),
+    UNIT VARCHAR2(15)
+);
+
+EXPLANATION:
+- OID: Primary Key (auto-named by Oracle)
+- VOL: Optional volume field
+- UNIT: Optional unit field
+
+
+================================================================================
+TABLE 2: CUSTOMER
+================================================================================
+
+CREATE TABLE CUSTOMER (
+    ID NUMBER(10,0) PRIMARY KEY,
+    NAME VARCHAR2(25) NOT NULL,
+    SURNAME VARCHAR2(25) NOT NULL,
+    STR VARCHAR2(50),
+    NO VARCHAR2(5),
+    ZIP CHAR(5) NOT NULL,
+    PLACE VARCHAR2(60) NOT NULL,
+    GEND NUMBER(1,0),
+    BDAY DATE
+);
+
+EXPLANATION:
+- ID: Primary Key (auto-named by Oracle)
+- NAME, SURNAME, ZIP, PLACE: Required fields
+- STR, NO, GEND, BDAY: Optional fields
+
+
+================================================================================
+TABLE 3: SORT
+================================================================================
+
+CREATE TABLE SORT (
+    SID NUMBER(2,0) PRIMARY KEY,
+    NAME VARCHAR2(20)
+);
+
+EXPLANATION:
+- SID: Primary Key (auto-named by Oracle)
+- NAME: Optional category name
+
+
+================================================================================
+TABLE 4: PRODUCT
+================================================================================
+
+CREATE TABLE PRODUCT (
+    ID NUMBER(10,0) PRIMARY KEY,
+    NAME VARCHAR2(35) NOT NULL,
+    SID NUMBER(2,0) REFERENCES SORT(SID),
+    OID NUMBER(2,0) REFERENCES BOTTLE(OID),
+    PRICE NUMBER(3,2) NOT NULL
+);
+
+EXPLANATION:
+- ID: Primary Key (auto-named by Oracle)
+- NAME: Required product name
+- SID: Optional Foreign Key to SORT (auto-named by Oracle)
+- OID: Optional Foreign Key to BOTTLE (auto-named by Oracle)
+- PRICE: Required price field
+
+
+================================================================================
+TABLE 5: ORDER
+================================================================================
+
+CREATE TABLE "ORDER" (
+    "ORDER" NUMBER(15,0) NOT NULL PRIMARY KEY,
+    "DATE" DATE NOT NULL UNIQUE,
+    "AMOUNT" NUMBER(5,0) NOT NULL,
+    "CSTMR" NUMBER(10,0) REFERENCES CUSTOMER(ID),
+    "PRO" NUMBER(10,0) REFERENCES PRODUCT(ID)
+);
+
+EXPLANATION:
+- "ORDER": Primary Key (auto-named by Oracle)
+- "DATE": Unique constraint (auto-named by Oracle)
+- "AMOUNT": Required order amount
+- "CSTMR": Optional Foreign Key to CUSTOMER (auto-named by Oracle)
+- "PRO": Optional Foreign Key to PRODUCT (auto-named by Oracle)
+
+
+================================================================================
+COMPLETE SCHEMA - ALL TABLES READY TO RUN
+================================================================================
+
+-- Drop tables if they exist (in reverse dependency order)
+DROP TABLE "ORDER";
+DROP TABLE PRODUCT;
+DROP TABLE CUSTOMER;
+DROP TABLE SORT;
+DROP TABLE BOTTLE;
+
+-- Create in correct order (referenced tables first)
+
+CREATE TABLE BOTTLE (
+    OID NUMBER(2,0) PRIMARY KEY,
+    VOL NUMBER(3,2),
+    UNIT VARCHAR2(15)
+);
+
+CREATE TABLE SORT (
+    SID NUMBER(2,0) PRIMARY KEY,
+    NAME VARCHAR2(20)
+);
+
+CREATE TABLE CUSTOMER (
+    ID NUMBER(10,0) PRIMARY KEY,
+    NAME VARCHAR2(25) NOT NULL,
+    SURNAME VARCHAR2(25) NOT NULL,
+    STR VARCHAR2(50),
+    NO VARCHAR2(5),
+    ZIP CHAR(5) NOT NULL,
+    PLACE VARCHAR2(60) NOT NULL,
+    GEND NUMBER(1,0),
+    BDAY DATE
+);
+
+CREATE TABLE PRODUCT (
+    ID NUMBER(10,0) PRIMARY KEY,
+    NAME VARCHAR2(35) NOT NULL,
+    SID NUMBER(2,0) REFERENCES SORT(SID),
+    OID NUMBER(2,0) REFERENCES BOTTLE(OID),
+    PRICE NUMBER(3,2) NOT NULL
+);
+
+CREATE TABLE "ORDER" (
+    "ORDER" NUMBER(15,0) NOT NULL PRIMARY KEY,
+    "DATE" DATE NOT NULL UNIQUE,
+    "AMOUNT" NUMBER(5,0) NOT NULL,
+    "CSTMR" NUMBER(10,0) REFERENCES CUSTOMER(ID),
+    "PRO" NUMBER(10,0) REFERENCES PRODUCT(ID)
+);
+
+
+================================================================================
+ENTITY-RELATIONSHIP (E/R) DIAGRAM
+================================================================================
+
+                    ┌──────────────┐
+                    │   BOTTLE     │
+                    │──────────────│
+                    │ OID (PK)     │
+                    │ VOL          │
+                    │ UNIT         │
+                    └──────┬───────┘
+                           │
+                           │ (1:N)
+                           │
+         ┌─────────────────┴─────────────────┐
+         │                                   │
+    ┌────▼─────────┐              ┌─────────▼──────┐
+    │    SORT      │              │   PRODUCT      │
+    │──────────────│              │────────────────│
+    │ SID (PK)     │◄─────────────│ ID (PK)        │
+    │ NAME         │              │ NAME           │
+    └──────────────┘              │ SID (FK)       │
+                                  │ OID (FK)       │
+                                  │ PRICE          │
+                                  └────────┬───────┘
+                                           │
+                                           │ (1:N)
+                                           │
+                    ┌──────────────┐       │
+                    │   CUSTOMER   │       │
+                    │──────────────│       │
+                    │ ID (PK)      │◄──────┴─────────┐
+                    │ NAME         │                 │
+                    │ SURNAME      │      ┌──────────▼──────┐
+                    │ STR          │      │     ORDER       │
+                    │ NO           │      │─────────────────│
+                    │ ZIP          │      │ ORDER (PK)      │
+                    │ PLACE        │      │ DATE (UNIQUE)   │
+                    │ GEND         │      │ AMOUNT          │
+                    │ BDAY         │      │ CSTMR (FK)      │
+                    └──────┬───────┘      │ PRO (FK)        │
+                           │             └─────────────────┘
+                           │ (1:N)
+                           │
+                           └─────────────────────────────┐
+                                                         │
+                                              (Foreign Key)
+
+RELATIONSHIPS:
+1. BOTTLE ──(1:N)──> PRODUCT (via OID)
+2. SORT ───(1:N)──> PRODUCT (via SID)
+3. CUSTOMER ─(1:N)─> ORDER (via CSTMR)
+4. PRODUCT ──(1:N)──> ORDER (via PRO)
+
+
+================================================================================
+DESIGN ISSUES (REQUIREMENT 5)
+================================================================================
+
+1. ✗ SYSTEM-GENERATED CONSTRAINT NAMES
+   Names: SYS_C0020XXX format (e.g., SYS_C0020137, SYS_C0020150)
+   Problem: Not meaningful or descriptive
+   Impact: Hard to identify constraints without querying database
+   Best Practice: Use meaningful names (PK_BOTTLE, FK_PRODUCT_SORT, UQ_ORDER_DATE)
+   Severity: Medium (affects code documentation)
+
+2. ✗ RESERVED KEYWORDS AS TABLE NAMES
+   Table: "ORDER" (must be quoted)
+   Problem: ORDER is SQL reserved keyword
+   Impact: Requires quotes in every query and DDL
+   Best Practice: Use ORDERS, SALES_ORDER, or PURCHASE_ORDER
+   Severity: High (source of errors)
+
+3. ✗ ABBREVIATED COLUMN NAMES
+   Examples: CSTMR, PRO, SID, OID, STR, NO, GEND, BDAY
+   Problem: Not self-documenting
+   Impact: Reduced readability and maintenance difficulty
+   Best Practice: CUSTOMER_ID, PRODUCT_ID, SORT_ID, BOTTLE_ID, STREET_ADDRESS, STREET_NUMBER, GENDER, BIRTH_DATE
+   Severity: Medium (impacts code quality)
+
+4. ✗ NULLABLE FOREIGN KEY COLUMNS
+   Columns: ORDER.CSTMR, ORDER.PRO, PRODUCT.SID, PRODUCT.OID (all NULLABLE)
+   Problem: FKs should be NOT NULL to enforce referential integrity
+   Impact: Orders can exist without customer or product
+   Best Practice: Make FKs NOT NULL unless business requirement says otherwise
+   Severity: High (data integrity concern)
+
+5. ⚠ DATA TYPE LIMITATION - PRICE
+   Column: PRODUCT.PRICE NUMBER(3,2)
+   Capacity: Maximum 9.99
+   Problem: Cannot sell expensive products (wines, spirits > €9.99)
+   Best Practice: Use NUMBER(7,2) or NUMBER(10,2)
+   Severity: High (functional limitation)
+
+6. ⚠ DATA TYPE LIMITATION - AMOUNT
+   Column: ORDER.AMOUNT NUMBER(5,0)
+   Capacity: Maximum 99,999
+   Problem: Limited order amount values
+   Best Practice: Increase precision based on business needs
+   Severity: Medium
+
+7. ⚠ UNIQUE CONSTRAINT ON DATE
+   Constraint: UNIQUE ("DATE")
+   Problem: Only ONE order allowed per date
+   Impact: Cannot have multiple orders on same day
+   Best Practice: Remove or change to UNIQUE(DATE, TIME)
+   Severity: High (business limitation)
+
+8. ⚠ NO TIMESTAMP PRECISION
+   Column: ORDER.DATE is just DATE (no time)
+   Problem: Cannot distinguish orders placed same day
+   Best Practice: Use TIMESTAMP or DATE + TIME columns
+   Severity: Medium (impacts order sequencing)
+
+9. ✗ MISSING ORDER_DETAILS TABLE
+   Issue: Can only sell ONE product per order
+   Problem: Cannot handle multi-item orders
+   Impact: Customer cannot buy multiple items in single order
+   Best Practice: Create ORDER_LINE_ITEMS table with QUANTITY, UNIT_PRICE, LINE_TOTAL
+   Severity: Critical (severe design flaw)
+
+10. ⚠ AMBIGUOUS GENDER FIELD
+    Column: CUSTOMER.GEND NUMBER(1,0)
+    Problem: Values unclear (0=?, 1=M, 2=F?)
+    Best Practice: Use VARCHAR2(1) with clear values 'M', 'F', 'U'
+    Severity: Low (works but unclear)
+
+11. ⚠ REDUNDANT CHECK CONSTRAINTS
+    Issue: All NOT NULL constraints duplicated as CHECK constraints in database
+    Example: OID NUMBER(2,0) NOT NULL + Oracle creates CHECK ("OID" IS NOT NULL)
+    Problem: Same rule enforced twice in internal storage
+    Best Practice: Use NOT NULL only (Oracle handles CHECK internally)
+    Severity: Low (works correctly, just redundant internally)
+
+
+================================================================================
+SUMMARY FOR YOUR ASSIGNMENT
+================================================================================
+
+REQUIREMENT 1: ✓ Connected to database
+REQUIREMENT 2: ✓ Reversed-engineered schema (5 queries completed)
+REQUIREMENT 3: ✓ DDL Statements (5 tables, clean column-level syntax, no explicit constraint names)
+REQUIREMENT 4: ✓ E/R diagram (shown above)
+REQUIREMENT 5: ✓ Design issues identified (11 issues documented)
+
+✅ DWT_BRANCH_3 COMPLETE!
+
+
+================================================================================
+KEY PRINCIPLES USED
+================================================================================
+
+✓ Column-level constraints (PRIMARY KEY, UNIQUE, NOT NULL, REFERENCES)
+✓ No explicit constraint names (let Oracle auto-generate)
+✓ Clean, readable syntax
+✓ Correct table creation order (parent tables first)
+✓ Proper use of REFERENCES for Foreign Keys
+✓ Quotes for reserved keywords ("ORDER", "DATE")
+✓ Documented design issues
+
+
+================================================================================
