@@ -1,0 +1,475 @@
+================================================================================
+DWT_BRANCH_5 - COMPLETE DDL STATEMENTS
+================================================================================
+
+Based on Query Results:
+- Query 1: Table list and row counts
+- Query 2: Column details (names, data types, sizes)
+- Query 3: Constraint types (P, C, R, U)
+- Query 4: CHECK constraint conditions
+- Query 5: PRIMARY KEY, FOREIGN KEY, UNIQUE column details
+
+================================================================================
+TABLE 1: PLACE (Lookup table)
+================================================================================
+
+CREATE TABLE PLACE (
+    ZIP CHAR(5) PRIMARY KEY,
+    PLACE VARCHAR2(30)
+);
+
+EXPLANATION:
+- ZIP: Postal code (Primary Key)
+  * CHAR(5) = Fixed 5 characters
+  * PRIMARY KEY (unique identifier)
+  * Automatically NOT NULL
+  
+- PLACE: City/Place name (optional)
+  * VARCHAR2(30)
+  * NULLABLE
+
+Table Rows: 22 (geographic lookup table)
+
+
+================================================================================
+TABLE 2: CUSTOMER
+================================================================================
+
+CREATE TABLE CUSTOMER (
+    ID NUMBER(10,0) NOT NULL,
+    NAME VARCHAR2(30) NOT NULL,
+    SURNAME VARCHAR2(30),
+    STR VARCHAR2(40) NOT NULL,
+    NO NUMBER(3,1) NOT NULL,
+    ZIP CHAR(5),
+    GEND CHAR(1),
+    BDAY DATE,
+    FOREIGN KEY (ZIP) REFERENCES PLACE(ZIP)
+);
+
+EXPLANATION:
+- ID: Customer ID (10 digits)
+  * NOT NULL
+  * ⚠️ NO PRIMARY KEY! (Missing PK constraint)
+  * Should be: PRIMARY KEY
+  
+- NAME: First/Last name (required)
+  * NOT NULL
+  * VARCHAR2(30)
+  
+- SURNAME: Surname (optional)
+  * NULLABLE
+  * VARCHAR2(30)
+  
+- STR: Street address (required)
+  * NOT NULL
+  * VARCHAR2(40)
+  
+- NO: Street number (required)
+  * NOT NULL
+  * NUMBER(3,1) - Has decimal scale!
+  * Examples: 1.0, 5.5, 10.0
+  
+- ZIP: Postal code (optional)
+  * NULLABLE
+  * CHAR(5)
+  * FOREIGN KEY references PLACE.ZIP
+  
+- GEND: Gender (optional)
+  * NULLABLE
+  * CHAR(1)
+  
+- BDAY: Birthday (optional)
+  * NULLABLE
+  * DATE
+
+Table Rows: 47,251
+
+⚠️ CRITICAL ISSUE: No PRIMARY KEY on CUSTOMER!
+   Should be: PRIMARY KEY (ID)
+
+
+================================================================================
+TABLE 3: PRODUCT
+================================================================================
+
+CREATE TABLE PRODUCT (
+    ID NUMBER(10,0) NOT NULL,
+    NAME VARCHAR2(30) NOT NULL,
+    SORT VARCHAR2(25),
+    SZ NUMBER(3,2),
+    PRICE NUMBER(3,2) NOT NULL,
+    UNIQUE (ID)
+);
+
+EXPLANATION:
+- ID: Product ID (10 digits)
+  * NOT NULL
+  * ⚠️ Has UNIQUE constraint instead of PRIMARY KEY!
+  * Should be: PRIMARY KEY
+  
+- NAME: Product name (required)
+  * NOT NULL
+  * VARCHAR2(30)
+  
+- SORT: Category/Sort (optional)
+  * NULLABLE
+  * VARCHAR2(25) ← Should be NUMBER and FK!
+  * Stored as text instead of referencing lookup table
+  
+- SZ: Size (optional)
+  * NULLABLE
+  * NUMBER(3,2) - Decimal format
+  * Examples: 1.50, 2.00 (e.g., liters)
+  
+- PRICE: Price (required)
+  * NOT NULL
+  * NUMBER(3,2) - Max 9.99 (same limitation as other branches)
+
+Table Rows: 29
+
+⚠️ CRITICAL ISSUES:
+   - No PRIMARY KEY (has UNIQUE instead!)
+   - SORT should be NUMBER FK, not VARCHAR2
+   - No referential relationship defined
+
+
+================================================================================
+TABLE 4: ORDER
+================================================================================
+
+CREATE TABLE "ORDER" (
+    OID VARCHAR2(30) PRIMARY KEY,
+    "DATE" DATE NOT NULL,
+    "CUSTOMER" VARCHAR2(50) NOT NULL
+);
+
+EXPLANATION:
+- OID: Order ID (30 characters)
+  * PRIMARY KEY
+  * ⚠️ VARCHAR2 instead of NUMBER! (Poor choice)
+  * Should be: NUMBER(13,0)
+  
+- "DATE": Order date (required)
+  * NOT NULL
+  * DATE type
+  * QUOTED because DATE is reserved keyword
+  
+- "CUSTOMER": Customer identifier (required)
+  * NOT NULL
+  * VARCHAR2(50) ← Should be NUMBER FK to CUSTOMER!
+  * Stored as text, not numeric reference
+
+Table Rows: 23,626
+
+⚠️ ISSUES:
+   - OID as VARCHAR2 instead of NUMBER
+   - CUSTOMER as VARCHAR2 instead of NUMBER FK
+   - No FK to CUSTOMER table
+
+
+================================================================================
+TABLE 5: ORDERS (Order line items)
+================================================================================
+
+CREATE TABLE ORDERS (
+    "ORDER" VARCHAR2(30),
+    PRODUCT NUMBER(10,0),
+    AMOUNT NUMBER(2,0) NOT NULL
+);
+
+EXPLANATION:
+- "ORDER": Order ID (optional)
+  * NULLABLE ← Should be NOT NULL!
+  * VARCHAR2(30)
+  * ⚠️ Should be FOREIGN KEY to ORDER.OID
+  * QUOTED because ORDER is reserved keyword
+  
+- PRODUCT: Product ID (optional)
+  * NULLABLE ← Should be NOT NULL!
+  * NUMBER(10,0)
+  * Should be FOREIGN KEY to PRODUCT.ID
+  
+- AMOUNT: Quantity (required)
+  * NOT NULL
+  * NUMBER(2,0) - Max 99 ← VERY SMALL!
+  * Can only order max 99 items per line!
+
+Table Rows: 70,747 (Order line items)
+
+⚠️ CRITICAL ISSUES:
+   - NO PRIMARY KEY! (Should be composite: ORDER + PRODUCT)
+   - Foreign keys are NULLABLE (should be NOT NULL)
+   - AMOUNT field too small (max 99)
+   - ORDER column should be NOT NULL
+
+
+================================================================================
+COMPLETE SCHEMA - ALL TABLES READY TO RUN
+================================================================================
+
+-- Drop tables if they exist (in reverse dependency order)
+DROP TABLE ORDERS;
+DROP TABLE "ORDER";
+DROP TABLE PRODUCT;
+DROP TABLE CUSTOMER;
+DROP TABLE PLACE;
+
+-- Create in correct order (referenced tables first)
+
+CREATE TABLE PLACE (
+    ZIP CHAR(5) PRIMARY KEY,
+    PLACE VARCHAR2(30)
+);
+
+CREATE TABLE CUSTOMER (
+    ID NUMBER(10,0) NOT NULL,
+    NAME VARCHAR2(30) NOT NULL,
+    SURNAME VARCHAR2(30),
+    STR VARCHAR2(40) NOT NULL,
+    NO NUMBER(3,1) NOT NULL,
+    ZIP CHAR(5),
+    GEND CHAR(1),
+    BDAY DATE,
+    FOREIGN KEY (ZIP) REFERENCES PLACE(ZIP)
+);
+
+CREATE TABLE PRODUCT (
+    ID NUMBER(10,0) NOT NULL,
+    NAME VARCHAR2(30) NOT NULL,
+    SORT VARCHAR2(25),
+    SZ NUMBER(3,2),
+    PRICE NUMBER(3,2) NOT NULL,
+    UNIQUE (ID)
+);
+
+CREATE TABLE "ORDER" (
+    OID VARCHAR2(30) PRIMARY KEY,
+    "DATE" DATE NOT NULL,
+    "CUSTOMER" VARCHAR2(50) NOT NULL
+);
+
+CREATE TABLE ORDERS (
+    "ORDER" VARCHAR2(30),
+    PRODUCT NUMBER(10,0),
+    AMOUNT NUMBER(2,0) NOT NULL
+);
+
+
+================================================================================
+ENTITY-RELATIONSHIP (E/R) DIAGRAM
+================================================================================
+
+                    ┌──────────────┐
+                    │    PLACE     │
+                    │──────────────│
+                    │ ZIP (PK)     │
+                    │ PLACE        │
+                    └──────┬───────┘
+                           │
+                           │ (1:N)
+                           │ ZIP
+                           │
+    ┌──────────────────────┘
+    │
+    │
+┌───▼──────────────┐
+│    CUSTOMER      │
+│──────────────────│
+│ ID (NO PK!)      │
+│ NAME             │
+│ SURNAME          │
+│ STR              │
+│ NO               │
+│ ZIP (FK)         │
+│ GEND             │
+│ BDAY             │
+└────────┬─────────┘
+         │
+         │ (1:N) - IMPLIED but NO FK
+         │ CUSTOMER (as VARCHAR2)
+         │
+    ┌────▼───────────┐      ┌──────────────┐
+    │     ORDER      │      │   PRODUCT    │
+    │────────────────│      │──────────────│
+    │ OID (PK)       │      │ ID (UNIQUE!) │
+    │ DATE           │      │ NAME         │
+    │ CUSTOMER (FK?) │      │ SORT (TEXT!) │
+    └────────┬───────┘      │ SZ           │
+             │              │ PRICE        │
+             │ (1:N)        └──────┬───────┘
+             │ OID (as VARCHAR2)  │
+             │                    │ (1:N) - IMPLIED but NO FK
+             │                    │ PRODUCT (as NUMBER)
+             │                    │
+             └────────┬──────────┘
+                      │
+                   ┌──▼────────────┐
+                   │    ORDERS     │
+                   │───────────────│
+                   │ ORDER (FK?)   │
+                   │ PRODUCT (FK?) │
+                   │ AMOUNT (NO PK)│
+                   └───────────────┘
+
+RELATIONSHIPS (IMPLIED - FKs not properly defined!):
+1. PLACE ───(1:N)──> CUSTOMER (via ZIP) - FK defined ✓
+2. CUSTOMER ─(1:N)─> ORDER (via CUSTOMER) - NO FK (varchar string)
+3. ORDER ───(1:N)──> ORDERS (via OID) - NO FK (varchar string, nullable)
+4. PRODUCT ─(1:N)─> ORDERS (via PRODUCT) - NO FK (nullable)
+
+
+================================================================================
+DESIGN ISSUES (REQUIREMENT 5)
+================================================================================
+
+1. ✗ MISSING PRIMARY KEYS ON 2 TABLES (CRITICAL!)
+   Tables without PK:
+   - CUSTOMER: Uses ID but no PK constraint
+   - ORDERS: No PK at all (should be composite)
+   
+   Severity: CRITICAL (data integrity)
+
+2. ✗ PRODUCT USES UNIQUE INSTEAD OF PRIMARY KEY
+   - Has UNIQUE (ID) instead of PRIMARY KEY (ID)
+   - Unusual and problematic design
+   - UNIQUE allows multiple NULLs, PK does not
+   - Should be: PRIMARY KEY (ID)
+   
+   Severity: High
+
+3. ✗ POOR DATA TYPE CHOICES (CRITICAL!)
+   - OID (Order ID) is VARCHAR2(30) instead of NUMBER
+   - CUSTOMER in ORDER is VARCHAR2(50) instead of NUMBER FK
+   - ORDER in ORDERS is VARCHAR2(30) instead of NUMBER FK
+   - SORT in PRODUCT is VARCHAR2(25) instead of NUMBER FK
+   
+   Using VARCHAR2 for IDs that should be numbers breaks relationships!
+   Severity: CRITICAL
+
+4. ✗ MISSING FOREIGN KEY CONSTRAINTS
+   Expected FKs:
+   - CUSTOMER.ZIP → PLACE.ZIP ✓ (exists)
+   - ORDER.CUSTOMER → CUSTOMER.ID ✗ (missing, wrong type)
+   - ORDERS.ORDER → ORDER.OID ✗ (missing, wrong type)
+   - ORDERS.PRODUCT → PRODUCT.ID ✗ (missing)
+   - PRODUCT.SORT → lookup table ✗ (missing entirely)
+   
+   Severity: CRITICAL
+
+5. ✗ NULLABLE FOREIGN KEY COLUMNS
+   - ORDERS.ORDER is NULLABLE (should be NOT NULL)
+   - ORDERS.PRODUCT is NULLABLE (should be NOT NULL)
+   - Allows orphaned line items
+   
+   Severity: High
+
+6. ⚠ VERY SMALL AMOUNT FIELD
+   - ORDERS.AMOUNT is NUMBER(2,0)
+   - Maximum value: 99
+   - Can only order max 99 items per line!
+   - Should be at least NUMBER(5,0)
+   
+   Severity: High
+
+7. ⚠ DATA TYPE FOR SIZE WITH DECIMAL SCALE
+   - CUSTOMER.NO is NUMBER(3,1) - Street number with decimal!
+   - PRODUCT.SZ is NUMBER(3,2) - Size with 2 decimals
+   - Unusual but technically valid
+   
+   Severity: Medium
+
+8. ⚠ PRICE FIELD LIMITATION
+   - PRODUCT.PRICE is NUMBER(3,2)
+   - Maximum value: 9.99
+   - Same limitation as other branches
+   
+   Severity: High
+
+9. ✗ INCONSISTENT ID NAMING AND TYPES
+   - CUSTOMER.ID is NUMBER (good)
+   - PRODUCT.ID is NUMBER (good)
+   - But ORDER.OID is VARCHAR2 (bad!)
+   - Inconsistency causes confusion
+   
+   Severity: Medium
+
+10. ✗ SORT AS TEXT INSTEAD OF PROPER REFERENCE
+    - PRODUCT.SORT is VARCHAR2(25)
+    - Should be NUMBER FK to SORT lookup table
+    - Or reference BRANCH_3/4 SORT table
+    - Currently no relational integrity
+    
+    Severity: High
+
+11. ✗ REDUNDANT CHECK CONSTRAINTS
+    - All NOT NULL constraints duplicated as CHECK
+    - Should use NOT NULL only in column definition
+    
+    Severity: Low
+
+
+================================================================================
+COMPARISON: ALL BRANCHES
+================================================================================
+
+BRANCH_3:
+  ✓ All tables have PRIMARY KEYS (5/5)
+  ✓ Has FOREIGN KEYS (4)
+  ✓ All IDs are NUMBER type
+  ✗ Single product per order design
+  ✗ Abbreviated names
+  ✓ Overall: Functional but poor structure
+
+BRANCH_4:
+  ✓ All tables have PRIMARY KEYS (5/5)
+  ✓ Proper ORDER-ITEM structure
+  ✓ All IDs are NUMBER type
+  ✗ Missing FOREIGN KEYS entirely (0)
+  ✓ Full descriptive names
+  ✗ Overall: Good structure, missing constraints
+
+BRANCH_5:
+  ✗ Only 2/5 tables have PRIMARY KEYS (CRITICAL!)
+  ✗ VARCHAR2 for IDs (CRITICAL!)
+  ✗ PRODUCT uses UNIQUE not PK
+  ✗ Only 1 FOREIGN KEY defined
+  ✗ Worst design overall
+  ✗ Overall: Severely flawed design
+
+
+VERDICT:
+========
+BRANCH_5 is the WORST designed database!
+
+Major Issues:
+  1. Missing PKs on CUSTOMER and ORDERS
+  2. VARCHAR2 for all order/customer references
+  3. SORT as text string, not proper reference
+  4. AMOUNT field way too small (99 max)
+  5. Only 1 proper FK (PLACE)
+
+
+================================================================================
+SUMMARY FOR YOUR ASSIGNMENT
+================================================================================
+
+REQUIREMENT 1: ✓ Connected to database
+REQUIREMENT 2: ✓ Reversed-engineered schema (5 queries completed)
+REQUIREMENT 3: ✓ DDL Statements (5 tables, clean syntax)
+REQUIREMENT 4: ✓ E/R diagram (shown above)
+REQUIREMENT 5: ✓ Design issues identified (11 issues documented)
+
+✅ DWT_BRANCH_5 COMPLETE!
+
+KEY FINDINGS:
+- WORST database design of all branches
+- Multiple missing PRIMARY KEYS
+- VARCHAR2 used for IDs (should be NUMBER)
+- Weak referential integrity
+- SORT as text instead of proper FK
+- AMOUNT field critically small
+- Multiple data type design flaws
+
+
+================================================================================
