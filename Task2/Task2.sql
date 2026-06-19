@@ -1,0 +1,123 @@
+CREATE TABLE PRODUCT (
+    PRODUCT_ID         NUMBER(10)      PRIMARY KEY,
+    PRODUCT_NAME       VARCHAR(15) NOT NULL,
+    PRODUCT_CATEGORY   VARCHAR2(20)   NOT NULL
+);
+
+CREATE TABLE CUSTOMER (
+    CUSTOMER_ID    NUMBER(10) PRIMARY KEY,
+    FIRST_NAME     VARCHAR2(25)NOT NULL,
+    LAST_NAME      VARCHAR2(25) NOT NULL,
+    GENDER         CHAR(1) NOT NULL,
+    DOB            DATE NOT NULL,
+    AGE_GROUP      VARCHAR2(20) NOT NULL,
+    STREET         VARCHAR2(20)NOT NULL,
+    PHONE_NUMBER   NUMBER(15) NOT NULL,
+    ZIP_CODE       VARCHAR2(10) NOT NULL,
+    CITY           VARCHAR2(50) NOT NULL,
+    CONSTRAINT chk_customer_gender CHECK (GENDER IN ('M', 'F', 'D')),
+    CONSTRAINT chk_customer_age_group CHECK (AGE_GROUP IN ('child', 'youngster', 'young adult', 'adult', 'old adult'))
+);
+
+
+CREATE TABLE BRANCH (
+    BRANCH_ID      NUMBER(10)  PRIMARY KEY,
+    BRANCH_NAME    VARCHAR2(100) NOT NULL,
+    CITY           VARCHAR2(50) NOT NULL,
+    REGION         VARCHAR2(50) NOT NULL,
+);
+
+CREATE TABLE TIME_DIM (
+    TIME_ID      NUMBER(10) PRIMARY KEY,
+    DAY          NUMBER(2),
+    WEEK         NUMBER(2),
+    MONTH        NUMBER(2),
+    QUARTER      NUMBER(1),
+    YEAR         NUMBER(4)
+);
+
+
+CREATE TABLE SALES (
+    TIME_ID            NUMBER(10)    NOT NULL,
+    CUSTOMER_ID        NUMBER(10)    NOT NULL,
+    PRODUCT_ID         NUMBER(10)    NOT NULL,
+    BRANCH_ID          NUMBER(10)    NOT NULL,
+    QUANTITY_LITERS    NUMBER(10,2)  NOT NULL,
+    REVENUE            NUMBER(10,2)  NOT NULL,
+
+    PRIMARY KEY(TIME_ID,CUSTOMER_ID,PRODUCT_ID,BRANCH_ID),
+
+    FOREIGN KEY (TIME_ID) REFERENCES TIME_DIM(TIME_ID),
+
+    FOREIGN KEY (CUSTOMER_ID) REFERENCES CUSTOMER(CUSTOMER_ID),
+
+    FOREIGN KEY (PRODUCT_ID) REFERENCES PRODUCT(PRODUCT_ID),
+
+    FOREIGN KEY (BRANCH_ID) REFERENCES BRANCH(BRANCH_ID)
+);
+
+
+CREATE DIMENSION time_dim
+   LEVEL day      IS TIME_DIM.DAY
+   LEVEL week     IS TIME_DIM.WEEK
+   LEVEL month    IS TIME_DIM.MONTH
+   LEVEL quarter  IS TIME_DIM.QUARTER
+   LEVEL year     IS TIME_DIM.YEAR
+   
+   HIERARCHY time_rollup (
+      day      CHILD OF
+      month    CHILD OF
+      quarter  CHILD OF
+      year
+   )
+   HIERARCHY weekly_rollup (
+      day      CHILD OF
+      week     CHILD OF
+      year
+   )
+   ATTRIBUTE day DETERMINES (TIME_DIM.DAY, TIME_DIM.WEEK, TIME_DIM.MONTH, TIME_DIM.QUARTER, TIME_DIM.YEAR);
+
+CREATE DIMENSION customer_dim
+   LEVEL customer   IS CUSTOMER.CUSTOMER_ID
+   LEVEL gender     IS CUSTOMER.GENDER
+   LEVEL age_grp    IS CUSTOMER.AGE_GROUP
+   
+   HIERARCHY gender_rollup (
+      customer CHILD OF
+      gender
+   )
+   HIERARCHY age_rollup (
+      customer CHILD OF
+      age_grp
+   )
+   ATTRIBUTE customer DETERMINES (
+      CUSTOMER.CUSTOMER_ID, 
+      CUSTOMER.FIRST_NAME, 
+      CUSTOMER.LAST_NAME, 
+      CUSTOMER.DOB,
+      CUSTOMER.STREET,
+      CUSTOMER.ZIP_CODE,
+      CUSTOMER.PHONE_NUMBER,
+      CUSTOMER.CITY
+   );
+
+
+CREATE DIMENSION branch_dim
+   LEVEL branch   IS BRANCH.BRANCH_ID
+   LEVEL city     IS BRANCH.CITY
+   LEVEL region   IS BRANCH.REGION
+   HIERARCHY geo_rollup (
+      branch   CHILD OF
+      city     CHILD OF
+      region
+   )
+   ATTRIBUTE branch DETERMINES (BRANCH.BRANCH_ID,BRANCH.CITY, BRANCH.BRANCH_NAME);
+
+CREATE DIMENSION product_dim
+   LEVEL product  IS PRODUCT.PRODUCT_ID
+   LEVEL category IS PRODUCT.PRODUCT_CATEGORY
+   HIERARCHY product_rollup (
+      product  CHILD OF
+      category
+   )
+   ATTRIBUTE product DETERMINES (PRODUCT.PRODUCT_ID, PRODUCT.PRODUCT_NAME);
